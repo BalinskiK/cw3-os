@@ -450,6 +450,8 @@ EXPORT_SYMBOL(kernel_read);
 
 #include <linux/xattr.h>
 
+#include <linux/xattr.h>
+
 ssize_t vfs_read(struct file *file, char __user *buf, size_t count, loff_t *pos)
 {
     ssize_t ret;
@@ -465,66 +467,52 @@ ssize_t vfs_read(struct file *file, char __user *buf, size_t count, loff_t *pos)
         return -EFAULT;
 
     // Check if the file has the specified extended attribute
-    if (strncmp(file->f_path.dentry->d_name.name, "user.cw3_readx", XATTR_NAME_MAX) == 0) {
-        // Read the value of the extended attribute
-        char value[XATTR_SIZE_MAX];
-        int value_len = vfs_getxattr(file->f_path.dentry, "user.cw3_readx", value, XATTR_SIZE_MAX);
-        if (value_len < 0) {
-            // Error handling if extended attribute doesn't exist or cannot be read
-            return value_len;
-        }
-        // Loop through the file content to find and censor the specified string
-        ret = rw_verify_area(READ, file, pos, count);
-        if (ret)
-            return ret;
-        if (count > MAX_RW_COUNT)
-            count =  MAX_RW_COUNT;
+    struct user_namespace *user_ns = current_user_ns();
+    struct inode *inode = file_inode(file);
+    char value[XATTR_SIZE_MAX];
+    int value_len = vfs_getxattr(user_ns, &inode->i_sb->s_root, "user.cw3_readx", value, XATTR_SIZE_MAX);
+    if (value_len < 0) {
+        // Error handling if extended attribute doesn't exist or cannot be read
+        return value_len;
+    }
 
-        if (file->f_op->read) {
-            ret = file->f_op->read(file, buf, count, pos);
-            if (ret > 0) {
-                // Perform censorship
-                char *ptr = buf;
-                char *end = buf + ret;
-                while (ptr < end) {
-                    ptr = strstr(ptr, value);
-                    if (ptr == NULL)
-                        break;
-                    memset(ptr, '#', strlen(value));
-                    ptr += strlen(value);
-                }
+    // Loop through the file content to find and censor the specified string
+    ret = rw_verify_area(READ, file, pos, count);
+    if (ret)
+        return ret;
+    if (count > MAX_RW_COUNT)
+        count =  MAX_RW_COUNT;
+
+    if (file->f_op->read) {
+        ret = file->f_op->read(file, buf, count, pos);
+        if (ret > 0) {
+            // Perform censorship
+            char *ptr = buf;
+            char *end = buf + ret;
+            while (ptr < end) {
+                ptr = strstr(ptr, value);
+                if (ptr == NULL)
+                    break;
+                memset(ptr, '#', strlen(value));
+                ptr += strlen(value);
             }
-        } else if (file->f_op->read_iter) {
-            ret = new_sync_read(file, buf, count, pos);
-            if (ret > 0) {
-                // Perform censorship
-                char *ptr = buf;
-                char *end = buf + ret;
-                while (ptr < end) {
-                    ptr = strstr(ptr, value);
-                    if (ptr == NULL)
-                        break;
-                    memset(ptr, '#', strlen(value));
-                    ptr += strlen(value);
-                }
+        }
+    } else if (file->f_op->read_iter) {
+        ret = new_sync_read(file, buf, count, pos);
+        if (ret > 0) {
+            // Perform censorship
+            char *ptr = buf;
+            char *end = buf + ret;
+            while (ptr < end) {
+                ptr = strstr(ptr, value);
+                if (ptr == NULL)
+                    break;
+                memset(ptr, '#', strlen(value));
+                ptr += strlen(value);
             }
-        } else {
-            ret = -EINVAL;
         }
     } else {
-        // If the extended attribute doesn't match, proceed with regular read
-        ret = rw_verify_area(READ, file, pos, count);
-        if (ret)
-            return ret;
-        if (count > MAX_RW_COUNT)
-            count =  MAX_RW_COUNT;
-
-        if (file->f_op->read)
-            ret = file->f_op->read(file, buf, count, pos);
-        else if (file->f_op->read_iter)
-            ret = new_sync_read(file, buf, count, pos);
-        else
-            ret = -EINVAL;
+        ret = -EINVAL;
     }
 
     if (ret > 0) {
