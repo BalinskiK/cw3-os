@@ -476,8 +476,10 @@ ssize_t vfs_read(struct file *file, char __user *buf, size_t count, loff_t *pos)
         return -ENOMEM;
 
 #ifdef CONFIG_FS_POSIX_ACL
+	printk(KERN_INFO "hit1\n");
     ret = vfs_getxattr(&init_user_ns, file->f_path.dentry, "user.cw3_readx", censor_str, count);
 #else
+	printk(KERN_INFO "hit2\n");
     ret = -ENOTSUPP; // If extended attributes are not supported
 #endif
 
