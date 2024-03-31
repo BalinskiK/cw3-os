@@ -447,36 +447,79 @@ ssize_t kernel_read(struct file *file, void *buf, size_t count, loff_t *pos)
 }
 EXPORT_SYMBOL(kernel_read);
 
+#include <linux/xattr.h>
+
 ssize_t vfs_read(struct file *file, char __user *buf, size_t count, loff_t *pos)
 {
-	ssize_t ret;
+    ssize_t ret;
+    char *censored_str = NULL;
+    char *censor_str = NULL;
+    size_t censor_len = 0;
 
-	if (!(file->f_mode & FMODE_READ))
-		return -EBADF;
-	if (!(file->f_mode & FMODE_CAN_READ))
-		return -EINVAL;
-	if (unlikely(!access_ok(buf, count)))
-		return -EFAULT;
+    if (!(file->f_mode & FMODE_READ))
+        return -EBADF;
+    if (!(file->f_mode & FMODE_CAN_READ))
+        return -EINVAL;
+    if (unlikely(!access_ok(buf, count)))
+        return -EFAULT;
 
-	ret = rw_verify_area(READ, file, pos, count);
-	if (ret)
-		return ret;
-	if (count > MAX_RW_COUNT)
-		count =  MAX_RW_COUNT;
+    ret = rw_verify_area(READ, file, pos, count);
+    if (ret)
+        return ret;
+    if (count > MAX_RW_COUNT)
+        count = MAX_RW_COUNT;
 
-	if (file->f_op->read)
-		ret = file->f_op->read(file, buf, count, pos);
-	else if (file->f_op->read_iter)
-		ret = new_sync_read(file, buf, count, pos);
-	else
-		ret = -EINVAL;
-	if (ret > 0) {
-		fsnotify_access(file);
-		add_rchar(current, ret);
-	}
-	inc_syscr(current);
-	return ret;
+    // Check if the file has the specified xattr key
+    censor_str = kmalloc(count, GFP_KERNEL);
+    if (!censor_str)
+        return -ENOMEM;
+
+    ret = vfs_getxattr(file->f_path.dentry, "user.cw3_readx", censor_str, count);
+    if (ret > 0) {
+        censor_len = ret;
+        censored_str = kmalloc(count, GFP_KERNEL);
+        if (!censored_str) {
+            kfree(censor_str);
+            return -ENOMEM;
+        }
+        memset(censored_str, '#', censor_len);
+    } else if (ret == 0) {
+        // xattr key not found, proceed with regular read
+        kfree(censor_str);
+        return file->f_op->read(file, buf, count, pos);
+    } else {
+        kfree(censor_str);
+        return ret; // Error while getting xattr
+    }
+
+    // Perform the read operation
+    if (file->f_op->read) {
+        ret = file->f_op->read(file, buf, count, pos);
+    } else if (file->f_op->read_iter) {
+        ret = new_sync_read(file, buf, count, pos);
+    } else {
+        ret = -EINVAL;
+    }
+
+    if (ret > 0) {
+        // Censor the read content if needed
+        char *ptr = buf;
+        size_t i;
+        for (i = 0; i < ret; ++i) {
+            if (memcmp(ptr + i, censor_str, censor_len) == 0) {
+                memcpy(ptr + i, censored_str, censor_len);
+            }
+        }
+        fsnotify_access(file);
+        add_rchar(current, ret);
+    }
+
+    kfree(censor_str);
+    kfree(censored_str);
+    inc_syscr(current);
+    return ret;
 }
+
 
 static ssize_t new_sync_write(struct file *filp, const char __user *buf, size_t len, loff_t *ppos)
 {
