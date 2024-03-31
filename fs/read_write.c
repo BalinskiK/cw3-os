@@ -452,6 +452,7 @@ EXPORT_SYMBOL(kernel_read);
 
 ssize_t vfs_read(struct file *file, char __user *buf, size_t count, loff_t *pos)
 {
+	printk(KERN_INFO "Accessed\n");
     ssize_t ret;
     char *censored_str = NULL;
     char *censor_str = NULL;
