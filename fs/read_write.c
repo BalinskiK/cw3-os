@@ -448,18 +448,18 @@ ssize_t kernel_read(struct file *file, void *buf, size_t count, loff_t *pos)
 }
 EXPORT_SYMBOL(kernel_read);
 
-
 ssize_t vfs_read(struct file *file, char __user *buf, size_t count, loff_t *pos)
 {
     ssize_t ret;
     struct user_namespace *user_ns;
     char value[XATTR_SIZE_MAX];
+    int value_len;
 
     // Get the user namespace
     user_ns = current_user_ns();
 
     // Check if the file has the specified extended attribute
-    int value_len = vfs_getxattr(user_ns, file->f_path.dentry, "user.cw3_readx", value, XATTR_SIZE_MAX);
+    value_len = vfs_getxattr(user_ns, file->f_path.dentry, "user.cw3_readx", value, XATTR_SIZE_MAX);
     if (value_len < 0) {
         // Error handling if extended attribute doesn't exist or cannot be read
         return value_len;
