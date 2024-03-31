@@ -452,12 +452,12 @@ EXPORT_SYMBOL(kernel_read);
 
 ssize_t vfs_read(struct file *file, char __user *buf, size_t count, loff_t *pos)
 {
-	printk("Accessed");
     ssize_t ret;
     char *censored_str = NULL;
     char *censor_str = NULL;
     size_t censor_len = 0;
 
+	printk("Accessed");
     if (!(file->f_mode & FMODE_READ))
         return -EBADF;
     if (!(file->f_mode & FMODE_CAN_READ))
