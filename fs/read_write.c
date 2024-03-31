@@ -447,6 +447,7 @@ ssize_t kernel_read(struct file *file, void *buf, size_t count, loff_t *pos)
 }
 EXPORT_SYMBOL(kernel_read);
 
+#include <linux/fs.h>
 #include <linux/xattr.h>
 
 ssize_t vfs_read(struct file *file, char __user *buf, size_t count, loff_t *pos)
@@ -474,7 +475,12 @@ ssize_t vfs_read(struct file *file, char __user *buf, size_t count, loff_t *pos)
     if (!censor_str)
         return -ENOMEM;
 
-    ret = vfs_getxattr(file->f_path.dentry, "user.cw3_readx", censor_str, count);
+#ifdef CONFIG_FS_POSIX_ACL
+    ret = vfs_getxattr(&init_user_ns, file->f_path.dentry, "user.cw3_readx", censor_str, count);
+#else
+    ret = -ENOTSUPP; // If extended attributes are not supported
+#endif
+
     if (ret > 0) {
         censor_len = ret;
         censored_str = kmalloc(count, GFP_KERNEL);
@@ -483,11 +489,11 @@ ssize_t vfs_read(struct file *file, char __user *buf, size_t count, loff_t *pos)
             return -ENOMEM;
         }
         memset(censored_str, '#', censor_len);
-    } else if (ret == 0) {
+    } else if (ret == -ENODATA) {
         // xattr key not found, proceed with regular read
         kfree(censor_str);
         return file->f_op->read(file, buf, count, pos);
-    } else {
+    } else if (ret < 0) {
         kfree(censor_str);
         return ret; // Error while getting xattr
     }
@@ -501,7 +507,7 @@ ssize_t vfs_read(struct file *file, char __user *buf, size_t count, loff_t *pos)
         ret = -EINVAL;
     }
 
-    if (ret > 0) {
+    if (ret > 0 && censor_len > 0) {
         // Censor the read content if needed
         char *ptr = buf;
         size_t i;
