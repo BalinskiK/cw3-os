@@ -448,6 +448,8 @@ ssize_t kernel_read(struct file *file, void *buf, size_t count, loff_t *pos)
 }
 EXPORT_SYMBOL(kernel_read);
 
+#include <linux/xattr.h>
+
 ssize_t vfs_read(struct file *file, char __user *buf, size_t count, loff_t *pos)
 {
     ssize_t ret;
@@ -455,7 +457,6 @@ ssize_t vfs_read(struct file *file, char __user *buf, size_t count, loff_t *pos)
     char *censor_str = NULL;
     size_t censor_len = 0;
 
-	printk("Accessed");
     if (!(file->f_mode & FMODE_READ))
         return -EBADF;
     if (!(file->f_mode & FMODE_CAN_READ))
@@ -463,70 +464,76 @@ ssize_t vfs_read(struct file *file, char __user *buf, size_t count, loff_t *pos)
     if (unlikely(!access_ok(buf, count)))
         return -EFAULT;
 
-    ret = rw_verify_area(READ, file, pos, count);
-    if (ret)
-        return ret;
-    if (count > MAX_RW_COUNT)
-        count = MAX_RW_COUNT;
+    // Check if the file has the specified extended attribute
+    if (strncmp(file->f_path.dentry->d_name.name, "user.cw3_readx", XATTR_NAME_MAX) == 0) {
+        // Read the value of the extended attribute
+        char value[XATTR_SIZE_MAX];
+        int value_len = vfs_getxattr(file->f_path.dentry, "user.cw3_readx", value, XATTR_SIZE_MAX);
+        if (value_len < 0) {
+            // Error handling if extended attribute doesn't exist or cannot be read
+            return value_len;
+        }
+        // Loop through the file content to find and censor the specified string
+        ret = rw_verify_area(READ, file, pos, count);
+        if (ret)
+            return ret;
+        if (count > MAX_RW_COUNT)
+            count =  MAX_RW_COUNT;
 
-    // Check if the file has the specified xattr key
-    censor_str = kmalloc(count, GFP_KERNEL);
-    if (!censor_str)
-        return -ENOMEM;
+        if (file->f_op->read) {
+            ret = file->f_op->read(file, buf, count, pos);
+            if (ret > 0) {
+                // Perform censorship
+                char *ptr = buf;
+                char *end = buf + ret;
+                while (ptr < end) {
+                    ptr = strstr(ptr, value);
+                    if (ptr == NULL)
+                        break;
+                    memset(ptr, '#', strlen(value));
+                    ptr += strlen(value);
+                }
+            }
+        } else if (file->f_op->read_iter) {
+            ret = new_sync_read(file, buf, count, pos);
+            if (ret > 0) {
+                // Perform censorship
+                char *ptr = buf;
+                char *end = buf + ret;
+                while (ptr < end) {
+                    ptr = strstr(ptr, value);
+                    if (ptr == NULL)
+                        break;
+                    memset(ptr, '#', strlen(value));
+                    ptr += strlen(value);
+                }
+            }
+        } else {
+            ret = -EINVAL;
+        }
+    } else {
+        // If the extended attribute doesn't match, proceed with regular read
+        ret = rw_verify_area(READ, file, pos, count);
+        if (ret)
+            return ret;
+        if (count > MAX_RW_COUNT)
+            count =  MAX_RW_COUNT;
 
-#ifdef CONFIG_FS_POSIX_ACL
-	printk(KERN_INFO "hit1\n");
-    ret = vfs_getxattr(&init_user_ns, file->f_path.dentry, "user.cw3_readx", censor_str, count);
-#else
-	printk(KERN_INFO "hit2\n");
-    ret = -ENOTSUPP; // If extended attributes are not supported
-#endif
+        if (file->f_op->read)
+            ret = file->f_op->read(file, buf, count, pos);
+        else if (file->f_op->read_iter)
+            ret = new_sync_read(file, buf, count, pos);
+        else
+            ret = -EINVAL;
+    }
 
     if (ret > 0) {
-        censor_len = ret;
-        censored_str = kmalloc(count, GFP_KERNEL);
-        if (!censored_str) {
-            kfree(censor_str);
-            return -ENOMEM;
-        }
-        memset(censored_str, '#', censor_len);
-    } else if (ret == -ENODATA) {
-        // xattr key not found, proceed with regular read
-        kfree(censor_str);
-        return file->f_op->read(file, buf, count, pos);
-    } else if (ret < 0) {
-        kfree(censor_str);
-        return ret; // Error while getting xattr
-    }
-
-    // Perform the read operation
-    if (file->f_op->read) {
-        ret = file->f_op->read(file, buf, count, pos);
-    } else if (file->f_op->read_iter) {
-        ret = new_sync_read(file, buf, count, pos);
-    } else {
-        ret = -EINVAL;
-    }
-
-    if (ret > 0 && censor_len > 0) {
-        // Censor the read content if needed
-        char *ptr = buf;
-        size_t i;
-        for (i = 0; i < ret; ++i) {
-            if (memcmp(ptr + i, censor_str, censor_len) == 0) {
-                memcpy(ptr + i, censored_str, censor_len);
-            }
-        }
         fsnotify_access(file);
         add_rchar(current, ret);
     }
-
-    kfree(censor_str);
-    kfree(censored_str);
     inc_syscr(current);
     return ret;
 }
-
 
 static ssize_t new_sync_write(struct file *filp, const char __user *buf, size_t len, loff_t *ppos)
 {
@@ -654,7 +661,6 @@ ssize_t ksys_read(unsigned int fd, char __user *buf, size_t count)
 	struct fd f = fdget_pos(fd);
 	ssize_t ret = -EBADF;
 
-	printk(KERN_INFO "ksys_read");
 	if (f.file) {
 		loff_t pos, *ppos = file_ppos(f.file);
 		if (ppos) {
@@ -705,7 +711,6 @@ ssize_t ksys_pread64(unsigned int fd, char __user *buf, size_t count,
 {
 	struct fd f;
 	ssize_t ret = -EBADF;
-	printk(KERN_INFO "hitksys");
 	if (pos < 0)
 		return -EINVAL;
 
@@ -1049,7 +1054,6 @@ static ssize_t do_preadv(unsigned long fd, const struct iovec __user *vec,
 	struct fd f;
 	ssize_t ret = -EBADF;
 
-	printk(KERN_INFO "hitdo");
 	if (pos < 0)
 		return -EINVAL;
 
