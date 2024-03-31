@@ -656,6 +656,7 @@ ssize_t ksys_read(unsigned int fd, char __user *buf, size_t count)
 	struct fd f = fdget_pos(fd);
 	ssize_t ret = -EBADF;
 
+	printk(KERN_INFO "ksys_read");
 	if (f.file) {
 		loff_t pos, *ppos = file_ppos(f.file);
 		if (ppos) {
@@ -706,7 +707,7 @@ ssize_t ksys_pread64(unsigned int fd, char __user *buf, size_t count,
 {
 	struct fd f;
 	ssize_t ret = -EBADF;
-
+	printk(KERN_INFO "hitksys");
 	if (pos < 0)
 		return -EINVAL;
 
@@ -1050,6 +1051,7 @@ static ssize_t do_preadv(unsigned long fd, const struct iovec __user *vec,
 	struct fd f;
 	ssize_t ret = -EBADF;
 
+	printl(KERN_INFO "hitdo");
 	if (pos < 0)
 		return -EINVAL;
 
