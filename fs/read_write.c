@@ -21,6 +21,7 @@
 #include <linux/mount.h>
 #include <linux/fs.h>
 #include "internal.h"
+#include <linux/xattr.h>
 
 #include <linux/uaccess.h>
 #include <asm/unistd.h>
@@ -446,9 +447,6 @@ ssize_t kernel_read(struct file *file, void *buf, size_t count, loff_t *pos)
 	return __kernel_read(file, buf, count, pos);
 }
 EXPORT_SYMBOL(kernel_read);
-
-#include <linux/fs.h>
-#include <linux/xattr.h>
 
 ssize_t vfs_read(struct file *file, char __user *buf, size_t count, loff_t *pos)
 {
@@ -1051,7 +1049,7 @@ static ssize_t do_preadv(unsigned long fd, const struct iovec __user *vec,
 	struct fd f;
 	ssize_t ret = -EBADF;
 
-	printl(KERN_INFO "hitdo");
+	printk(KERN_INFO "hitdo");
 	if (pos < 0)
 		return -EINVAL;
 
