@@ -448,67 +448,86 @@ ssize_t kernel_read(struct file *file, void *buf, size_t count, loff_t *pos)
 }
 EXPORT_SYMBOL(kernel_read);
 
+
 ssize_t vfs_read(struct file *file, char __user *buf, size_t count, loff_t *pos)
 {
     ssize_t ret;
-    struct user_namespace *user_ns;
-    char value[XATTR_SIZE_MAX];
-    int value_len;
+    char *censor_string = NULL;
+    char *censored_buf = NULL;
+    size_t i;
 
-    // Get the user namespace
-    user_ns = current_user_ns();
+    if (!(file->f_mode & FMODE_READ))
+        return -EBADF;
+    if (!(file->f_mode & FMODE_CAN_READ))
+        return -EINVAL;
+    if (unlikely(!access_ok(buf, count)))
+        return -EFAULT;
 
-    // Check if the file has the specified extended attribute
-    value_len = vfs_getxattr(user_ns, file->f_path.dentry, "user.cw3_readx", value, XATTR_SIZE_MAX);
-    if (value_len < 0) {
-        // Error handling if extended attribute doesn't exist or cannot be read
-        return value_len;
+    // Check if the file has the xattr key user.cw3_readx
+    if (file->f_inode && file->f_inode->i_sb && file->f_path.dentry) {
+        struct inode *inode = file->f_inode;
+        struct super_block *sb = inode->i_sb;
+        struct dentry *dentry = file->f_path.dentry;
+        
+        if (sb && sb->s_xattr && sb->s_xattr->get) {
+            ssize_t len = sb->s_xattr->get(dentry, XATTR_USER_PREFIX"user.cw3_readx", NULL, 0);
+            if (len > 0) {
+                censor_string = kmalloc(len + 1, GFP_KERNEL);
+                if (!censor_string)
+                    return -ENOMEM;
+                len = sb->s_xattr->get(dentry, XATTR_USER_PREFIX"user.cw3_readx", censor_string, len);
+                censor_string[len] = '\0';
+            }
+        }
     }
 
-    // Loop through the file content to find and censor the specified string
     ret = rw_verify_area(READ, file, pos, count);
     if (ret)
         return ret;
     if (count > MAX_RW_COUNT)
-        count =  MAX_RW_COUNT;
+        count = MAX_RW_COUNT;
 
     if (file->f_op->read) {
         ret = file->f_op->read(file, buf, count, pos);
-        if (ret > 0) {
-            // Perform censorship
-            char *ptr = buf;
-            char *end = buf + ret;
-            while (ptr < end) {
-                ptr = strstr(ptr, value);
-                if (ptr == NULL)
-                    break;
-                memset(ptr, '#', strlen(value));
-                ptr += strlen(value);
+
+        // If a censor string is defined, censor the content
+        if (censor_string && ret > 0) {
+            censored_buf = kmalloc(ret, GFP_KERNEL);
+            if (!censored_buf) {
+                kfree(censor_string);
+                return -ENOMEM;
             }
+
+            // Copy and censor the content
+            for (i = 0; i < ret; i++) {
+                if (strnstr(buf + i, censor_string, ret - i) == buf + i) {
+                    memset(censored_buf + i, '#', strlen(censor_string));
+                    i += strlen(censor_string) - 1;
+                } else {
+                    censored_buf[i] = buf[i];
+                }
+            }
+
+            // Copy censored content back to user buffer
+            if (copy_to_user(buf, censored_buf, ret)) {
+                kfree(censor_string);
+                kfree(censored_buf);
+                return -EFAULT;
+            }
+            kfree(censored_buf);
         }
     } else if (file->f_op->read_iter) {
         ret = new_sync_read(file, buf, count, pos);
-        if (ret > 0) {
-            // Perform censorship
-            char *ptr = buf;
-            char *end = buf + ret;
-            while (ptr < end) {
-                ptr = strstr(ptr, value);
-                if (ptr == NULL)
-                    break;
-                memset(ptr, '#', strlen(value));
-                ptr += strlen(value);
-            }
-        }
     } else {
         ret = -EINVAL;
     }
-
     if (ret > 0) {
         fsnotify_access(file);
         add_rchar(current, ret);
     }
     inc_syscr(current);
+
+    kfree(censor_string);
     return ret;
 }
 
