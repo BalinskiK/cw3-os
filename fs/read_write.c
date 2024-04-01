@@ -454,6 +454,7 @@ ssize_t vfs_read(struct file *file, char __user *buf, size_t count, loff_t *pos)
     ssize_t ret;
     char *censor_string = NULL;
     char *censored_buf = NULL;
+	bool exists = false;
     size_t i;
 
     if (!(file->f_mode & FMODE_READ))
@@ -464,44 +465,17 @@ ssize_t vfs_read(struct file *file, char __user *buf, size_t count, loff_t *pos)
         return -EFAULT;
 
 
-	// Check if the file has the xattr key user.cw3_readx
-
-	// Check if the file has the xattr key user.cw3_readx
+	// Check if the file has the xattr key user.cw3_readx	
 	if (file->f_path.dentry) {
-		struct dentry *dentry = file->f_path.dentry;
-		char xattr_value[256]; // Adjust the size as needed
-		struct inode *inode = NULL;
-		struct super_block *sb = NULL;
-		struct user_namespace *ns = NULL;
+    struct dentry *dentry = file->f_path.dentry;
+    char xattr_value[256]; // Adjust the size as needed
 
-		// Obtain the user namespace
-		inode = d_inode(dentry);
-		if (inode) {
-			sb = inode->i_sb;
-			if (sb)
-				ns = sb->s_user_ns;
-		}
+    ssize_t len = vfs_getxattr(dentry, "user.cw3_readx", xattr_value, sizeof(xattr_value));
 
-		// Check if we have a valid user namespace and xattr support
-		if (ns && ns->mnt_ns && sb && sb->s_xattr && sb->s_xattr->get) {
-			ssize_t len = vfs_getxattr(ns, dentry, "user.cw3_readx", xattr_value, sizeof(xattr_value));
+    if (len >= 0) {
+        exists = true;
+    }
 
-			if (len > 0) {
-				censor_string = kmalloc(len + 1, GFP_KERNEL);
-				if (!censor_string)
-					return -ENOMEM;
-
-				// Retrieve the xattr value
-				len = vfs_getxattr(ns, dentry, "user.cw3_readx", censor_string, len);
-				censor_string[len] = '\0';
-			}
-		}
-	}
-
-	
-
-
-	
     ret = rw_verify_area(READ, file, pos, count);
     if (ret)
         return ret;
@@ -512,7 +486,7 @@ ssize_t vfs_read(struct file *file, char __user *buf, size_t count, loff_t *pos)
         ret = file->f_op->read(file, buf, count, pos);
 
         // If a censor string is defined, censor the content
-        if (censor_string && ret > 0) {
+        if (exists && ret > 0) {
             censored_buf = kmalloc(ret, GFP_KERNEL);
             if (!censored_buf) {
                 kfree(censor_string);
