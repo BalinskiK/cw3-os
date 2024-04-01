@@ -626,7 +626,7 @@ ssize_t vfs_write(struct file *file, const char __user *buf, size_t count, loff_
 
 			if (len >= 0) {
 				exists = true;
-				printk("true")
+				printk("true");
 			}
 		}
 	else
