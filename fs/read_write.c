@@ -382,15 +382,23 @@ static ssize_t new_sync_read(struct file *filp, char __user *buf, size_t len, lo
 	struct kiocb kiocb;
 	struct iov_iter iter;
 	ssize_t ret;
+	printk("prebuff");	
 
 	init_sync_kiocb(&kiocb, filp);
+	printk("prebuff2");	
+
 	kiocb.ki_pos = (ppos ? *ppos : 0);
 	iov_iter_ubuf(&iter, READ, buf, len);
+	printk("prebuff3");	
+
 
 	ret = call_read_iter(filp, &kiocb, &iter);
+	printk("prebuff4");	
+
 	BUG_ON(ret == -EIOCBQUEUED);
 	if (ppos)
 		*ppos = kiocb.ki_pos;
+	printk("prebuff1");	
 	return ret;
 }
 
