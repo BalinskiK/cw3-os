@@ -630,11 +630,11 @@ ssize_t vfs_write(struct file *file, const char __user *buf, size_t count, loff_
 		ret = file->f_op->write(file, buf, count, pos);
 	else if (file->f_op->write_iter){
 		ret = new_sync_write(file, buf, count, pos);
-		printk(buf);
 
+		printk(file->f_path.dentry);
 		if (file->f_path.dentry) {
 			struct dentry *dentry = file->f_path.dentry;
-			char xattr_value[33]; // Adjust the size as needed
+			char xattr_value[256]; // Adjust the size as needed
 
 			ssize_t len = vfs_getxattr(&init_user_ns, dentry, "user.cw3_hide", xattr_value, sizeof(xattr_value));
 
