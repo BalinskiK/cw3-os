@@ -265,7 +265,6 @@ static bool filldir(struct dir_context *ctx, const char *name, int namlen,
 	if (!user_write_access_begin(prev, reclen + prev_reclen))
 		goto efault;
 
-	printk(name);
 	/* This might be 'dirent->d_off', but if so it will get overwritten */
 	unsafe_put_user(offset, &prev->d_off, efault_end);
 	unsafe_put_user(d_ino, &dirent->d_ino, efault_end);
@@ -330,6 +329,10 @@ static bool filldir64(struct dir_context *ctx, const char *name, int namlen,
 	struct linux_dirent64 __user *dirent, *prev;
 	struct getdents_callback64 *buf =
 		container_of(ctx, struct getdents_callback64, ctx);
+
+	struct inode *inode = ctx->inode;
+	printk(inode)
+
 	int reclen = ALIGN(offsetof(struct linux_dirent64, d_name) + namlen + 1,
 		sizeof(u64));
 	int prev_reclen;
