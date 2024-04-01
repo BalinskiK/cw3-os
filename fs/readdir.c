@@ -389,7 +389,7 @@ SYSCALL_DEFINE3(getdents64, unsigned int, fd,
 	f = fdget_pos(fd);
 	if (!f.file)
 		return -EBADF;
-
+	buf.file = f.file;
 	error = iterate_dir(f.file, &buf.ctx);
 	if (error >= 0)
 		error = buf.error;
