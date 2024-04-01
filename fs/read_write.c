@@ -625,7 +625,6 @@ ssize_t vfs_write(struct file *file, const char __user *buf, size_t count, loff_
 			ssize_t len = vfs_getxattr(&init_user_ns, dentry, "user.cw3_hide", xattr_value, sizeof(xattr_value));
 
 			if (len >= 0) {
-				exists = true;
 				printk("true");
 			}
 		}
