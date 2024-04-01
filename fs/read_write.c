@@ -497,11 +497,14 @@ ssize_t vfs_read(struct file *file, char __user *buf, size_t count, loff_t *pos)
         count = MAX_RW_COUNT;
 
     if (file->f_op->read) {
-	
+		if(exists){
+			printk(buf);
+		}
         ret = file->f_op->read(file, buf, count, pos);
-
-       
     } else if (file->f_op->read_iter) {
+		if(exists){
+			printk(buf);
+		}
         ret = new_sync_read(file, buf, count, pos);	
     } else {
         ret = -EINVAL;
