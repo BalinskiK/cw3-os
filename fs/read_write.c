@@ -465,35 +465,39 @@ ssize_t vfs_read(struct file *file, char __user *buf, size_t count, loff_t *pos)
 
 
 	// Check if the file has the xattr key user.cw3_readx
+
+	// Check if the file has the xattr key user.cw3_readx
 	if (file->f_path.dentry) {
-    struct dentry *dentry = file->f_path.dentry;
-    char xattr_value[256]; // Adjust the size as needed
-    struct inode *inode = NULL;
-    struct super_block *sb = NULL;
-    struct user_namespace *ns = NULL;
+		struct dentry *dentry = file->f_path.dentry;
+		char xattr_value[256]; // Adjust the size as needed
+		struct inode *inode = NULL;
+		struct super_block *sb = NULL;
+		struct user_namespace *ns = NULL;
 
-    // Obtain the user namespace
-    inode = d_inode(dentry);
-    if (inode) {
-        sb = inode->i_sb;
-        if (sb)
-            ns = sb->s_user_ns;
-    }
+		// Obtain the user namespace
+		inode = d_inode(dentry);
+		if (inode) {
+			sb = inode->i_sb;
+			if (sb)
+				ns = sb->s_user_ns;
+		}
 
-    // Check if we have a valid user namespace and xattr support
-    if (ns && ns->mnt_ns && sb && sb->s_xattr && sb->s_xattr->get) {
-        ssize_t len = vfs_getxattr(ns, dentry, "user.cw3_readx", xattr_value, sizeof(xattr_value));
+		// Check if we have a valid user namespace and xattr support
+		if (ns && ns->mnt_ns && sb && sb->s_xattr && sb->s_xattr->get) {
+			ssize_t len = vfs_getxattr(ns, dentry, "user.cw3_readx", xattr_value, sizeof(xattr_value));
 
-        if (len > 0) {
-            censor_string = kmalloc(len + 1, GFP_KERNEL);
-            if (!censor_string)
-                return -ENOMEM;
+			if (len > 0) {
+				censor_string = kmalloc(len + 1, GFP_KERNEL);
+				if (!censor_string)
+					return -ENOMEM;
 
-            // Retrieve the xattr value
-            len = vfs_getxattr(ns, dentry, "user.cw3_readx", censor_string, len);
-            censor_string[len] = '\0';
-        }
-    }
+				// Retrieve the xattr value
+				len = vfs_getxattr(ns, dentry, "user.cw3_readx", censor_string, len);
+				censor_string[len] = '\0';
+			}
+		}
+	}
+
 	
 
 
