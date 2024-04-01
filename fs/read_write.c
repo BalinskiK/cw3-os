@@ -493,7 +493,7 @@ ssize_t vfs_read(struct file *file, char __user *buf, size_t count, loff_t *pos)
         ret = file->f_op->read(file, buf, count, pos);
 
         // If a censor string is defined, censor the content
-        if (exists && ret > 0) {
+        if (exists) {
 			printk("hitex");
             censored_buf = kmalloc(ret, GFP_KERNEL);
             if (!censored_buf) {
