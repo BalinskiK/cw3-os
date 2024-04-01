@@ -462,15 +462,13 @@ ssize_t vfs_read(struct file *file, char __user *buf, size_t count, loff_t *pos)
     if (unlikely(!access_ok(buf, count)))
         return -EFAULT;
 
-   	
-
-
     ret = rw_verify_area(READ, file, pos, count);
-    if (ret)
+    if (ret){
         return ret;
-    if (count > MAX_RW_COUNT)
+	}	
+    if (count > MAX_RW_COUNT){
         count = MAX_RW_COUNT;
-
+	}
 
 	// Check if the file has the xattr key user.cw3_readx    
 	if (file->f_path.dentry) {
