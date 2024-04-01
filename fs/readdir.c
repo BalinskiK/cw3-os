@@ -307,6 +307,7 @@ struct getdents_callback64 {
 	int prev_reclen;
 	int count;
 	int error;
+	struct file *file;
 };
 
 static bool filldir64(struct dir_context *ctx, const char *name, int namlen,
