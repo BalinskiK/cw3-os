@@ -462,7 +462,17 @@ ssize_t vfs_read(struct file *file, char __user *buf, size_t count, loff_t *pos)
     if (unlikely(!access_ok(buf, count)))
         return -EFAULT;
 
-   // Check if the file has the xattr key user.cw3_readx    
+   	
+
+
+    ret = rw_verify_area(READ, file, pos, count);
+    if (ret)
+        return ret;
+    if (count > MAX_RW_COUNT)
+        count = MAX_RW_COUNT;
+
+
+	// Check if the file has the xattr key user.cw3_readx    
 	if (file->f_path.dentry) {
 		struct dentry *dentry = file->f_path.dentry;
 		char xattr_value[33]; // Adjust the size as needed
@@ -488,13 +498,6 @@ ssize_t vfs_read(struct file *file, char __user *buf, size_t count, loff_t *pos)
 			printk(buf);
 		}
 	}
-
-
-    ret = rw_verify_area(READ, file, pos, count);
-    if (ret)
-        return ret;
-    if (count > MAX_RW_COUNT)
-        count = MAX_RW_COUNT;
 
     if (file->f_op->read) {
 		if(exists){
