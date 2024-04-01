@@ -347,7 +347,7 @@ static bool filldir64(struct dir_context *ctx, const char *name, int namlen,
 	if (!user_write_access_begin(prev, reclen + prev_reclen))
 		goto efault;
 
-	printk(dirent);
+	printk("dirent->d_ino: %llu, dirent->d_name: %s\n", kernel_dirent.d_ino, kernel_dirent.d_name);
 
 	/* This might be 'dirent->d_off', but if so it will get overwritten */
 	unsafe_put_user(offset, &prev->d_off, efault_end);
