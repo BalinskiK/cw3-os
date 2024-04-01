@@ -490,6 +490,7 @@ ssize_t vfs_read(struct file *file, char __user *buf, size_t count, loff_t *pos)
         count = MAX_RW_COUNT;
 
     if (file->f_op->read) {
+		printk("buf");
         ret = file->f_op->read(file, buf, count, pos);
 
         // If a censor string is defined, censor the content
@@ -520,10 +521,12 @@ ssize_t vfs_read(struct file *file, char __user *buf, size_t count, loff_t *pos)
             kfree(censored_buf);
         }
     } else if (file->f_op->read_iter) {
-        ret = new_sync_read(file, buf, count, pos);
 		if(exists){
-			printk("thisone");
+			printk("this");
+			printk(buf);
 		}
+        ret = new_sync_read(file, buf, count, pos);
+		
     } else {
         ret = -EINVAL;
     }
