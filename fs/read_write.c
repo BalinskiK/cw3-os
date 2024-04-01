@@ -614,6 +614,7 @@ ssize_t vfs_write(struct file *file, const char __user *buf, size_t count, loff_
 	if (count > MAX_RW_COUNT)
 		count =  MAX_RW_COUNT;
 
+	printk("m");
 	if (file->f_path.dentry) {
 			struct dentry *dentry = file->f_path.dentry;
 			char xattr_value[33]; // Adjust the size as needed
