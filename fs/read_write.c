@@ -454,7 +454,7 @@ ssize_t vfs_read(struct file *file, char __user *buf, size_t count, loff_t *pos)
     ssize_t ret;
     char *censor_string = NULL;
     char *censored_buf = NULL;
-	bool exists = false;
+    bool exists = false;
     size_t i;
 
     if (!(file->f_mode & FMODE_READ))
@@ -464,16 +464,21 @@ ssize_t vfs_read(struct file *file, char __user *buf, size_t count, loff_t *pos)
     if (unlikely(!access_ok(buf, count)))
         return -EFAULT;
 
+    // Check if the file has the xattr key user.cw3_readx    
+    if (file->f_path.dentry) {
+        struct dentry *dentry = file->f_path.dentry;
+        char xattr_value[256]; // Adjust the size as needed
 
-	// Check if the file has the xattr key user.cw3_readx	
-	if (file->f_path.dentry) {
-    struct dentry *dentry = file->f_path.dentry;
-    char xattr_value[256]; // Adjust the size as needed
+        ssize_t len = vfs_getxattr(dentry, "user.cw3_readx", xattr_value, sizeof(xattr_value));
 
-    ssize_t len = vfs_getxattr(dentry, "user.cw3_readx", xattr_value, sizeof(xattr_value));
-
-    if (len >= 0) {
-        exists = true;
+        if (len >= 0) {
+            exists = true;
+            censor_string = kmalloc(len + 1, GFP_KERNEL);
+            if (!censor_string)
+                return -ENOMEM;
+            memcpy(censor_string, xattr_value, len);
+            censor_string[len] = '\0';
+        }
     }
 
     ret = rw_verify_area(READ, file, pos, count);
@@ -495,7 +500,7 @@ ssize_t vfs_read(struct file *file, char __user *buf, size_t count, loff_t *pos)
 
             // Copy and censor the content
             for (i = 0; i < ret; i++) {
-                if (strnstr(buf + i, censor_string, ret - i) == buf + i) {
+                if (strstr(buf + i, censor_string) == buf + i) {
                     memset(censored_buf + i, '#', strlen(censor_string));
                     i += strlen(censor_string) - 1;
                 } else {
