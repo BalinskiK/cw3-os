@@ -469,7 +469,7 @@ ssize_t vfs_read(struct file *file, char __user *buf, size_t count, loff_t *pos)
         struct dentry *dentry = file->f_path.dentry;
         char xattr_value[256]; // Adjust the size as needed
 
-        ssize_t len = vfs_getxattr(dentry, "user.cw3_readx", xattr_value, sizeof(xattr_value));
+        ssize_t len = vfs_getxattr(*dentry, "user.cw3_readx", xattr_value, sizeof(xattr_value));
 
         if (len >= 0) {
             exists = true;
