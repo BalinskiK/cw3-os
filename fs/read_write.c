@@ -382,23 +382,17 @@ static ssize_t new_sync_read(struct file *filp, char __user *buf, size_t len, lo
 	struct kiocb kiocb;
 	struct iov_iter iter;
 	ssize_t ret;
-	printk("prebuff");	
 
 	init_sync_kiocb(&kiocb, filp);
-	printk("prebuff2");	
 
 	kiocb.ki_pos = (ppos ? *ppos : 0);
 	iov_iter_ubuf(&iter, READ, buf, len);
-	printk("prebuff3");	
-
 
 	ret = call_read_iter(filp, &kiocb, &iter);
-	printk("prebuff4");	
 
 	BUG_ON(ret == -EIOCBQUEUED);
 	if (ppos)
 		*ppos = kiocb.ki_pos;
-	printk("prebuff1");	
 	return ret;
 }
 
@@ -507,6 +501,7 @@ ssize_t vfs_read(struct file *file, char __user *buf, size_t count, loff_t *pos)
 
     if (file->f_op->read) {
         ret = file->f_op->read(file, buf, count, pos);
+		printk("read");
     } else if (file->f_op->read_iter) {
 		if(exists){
 			printk("there");
@@ -516,6 +511,8 @@ ssize_t vfs_read(struct file *file, char __user *buf, size_t count, loff_t *pos)
         ret = new_sync_read(file, buf, count, pos);	
 		if(exists){
 			printk("after foo");
+			printk(KERN_INFO "buff: %s\n", buf);
+
 		}
     } else {
         ret = -EINVAL;
