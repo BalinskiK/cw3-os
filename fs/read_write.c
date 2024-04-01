@@ -464,24 +464,31 @@ ssize_t vfs_read(struct file *file, char __user *buf, size_t count, loff_t *pos)
     if (unlikely(!access_ok(buf, count)))
         return -EFAULT;
 
-    // Check if the file has the xattr key user.cw3_readx    
-    if (file->f_path.dentry) {
-        struct dentry *dentry = file->f_path.dentry;
-        char xattr_value[33]; // Adjust the size as needed
+   // Check if the file has the xattr key user.cw3_readx    
+	if (file->f_path.dentry) {
+		struct dentry *dentry = file->f_path.dentry;
+		char xattr_value[33]; // Adjust the size as needed
 
-        ssize_t len = vfs_getxattr(&init_user_ns, dentry, "user.cw3_readx", xattr_value, sizeof(xattr_value));
+		ssize_t len = vfs_getxattr(&init_user_ns, dentry, "user.cw3_readx", xattr_value, sizeof(xattr_value));
 
-        if (len >= 0) {
-			printk("hit");
-            exists = true;
-            censor_string = kmalloc(len + 1, GFP_KERNEL);
-            if (!censor_string)
-                return -ENOMEM;
-            memcpy(censor_string, xattr_value, len);
-            censor_string[len] = '\0';
-			printk(censor_string);
-        }
-    }
+		if (len >= 0) {
+			exists = true;
+			censor_string = kmalloc(len + 1, GFP_KERNEL);
+			if (!censor_string)
+				return -ENOMEM;
+			memcpy(censor_string, xattr_value, len);
+			censor_string[len] = '\0';
+
+			// Loop through buf to censor content based on censor_string
+			for (size_t i = 0; i < count; i++) {
+				if (strstr(buf + i, censor_string) == buf + i) {
+					memset(buf + i, '#', strlen(censor_string));
+					i += strlen(censor_string) - 1;
+				}
+			}
+		}
+	}
+
 
     ret = rw_verify_area(READ, file, pos, count);
     if (ret)
@@ -490,45 +497,12 @@ ssize_t vfs_read(struct file *file, char __user *buf, size_t count, loff_t *pos)
         count = MAX_RW_COUNT;
 
     if (file->f_op->read) {
-		if (exists) {
-			printk("buf");
-		}
+	
         ret = file->f_op->read(file, buf, count, pos);
 
-        // If a censor string is defined, censor the content
-        if (exists) {
-			printk("hitex");
-            censored_buf = kmalloc(ret, GFP_KERNEL);
-            if (!censored_buf) {
-                kfree(censor_string);
-                return -ENOMEM;
-            }
-
-            // Copy and censor the content
-            for (i = 0; i < ret; i++) {
-                if (strnstr(buf + i, censor_string, ret - i) == buf + i) {
-                    memset(censored_buf + i, '#', strlen(censor_string));
-                    i += strlen(censor_string) - 1;
-                } else {
-                    censored_buf[i] = buf[i];
-                }
-            }
-
-            // Copy censored content back to user buffer
-            if (copy_to_user(buf, censored_buf, ret)) {
-                kfree(censor_string);
-                kfree(censored_buf);
-                return -EFAULT;
-            }
-            kfree(censored_buf);
-        }
+       
     } else if (file->f_op->read_iter) {
-		if(exists){
-			printk("this");
-			printk(buf);
-		}
-        ret = new_sync_read(file, buf, count, pos);
-		
+        ret = new_sync_read(file, buf, count, pos);	
     } else {
         ret = -EINVAL;
     }
