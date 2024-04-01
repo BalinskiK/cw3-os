@@ -465,10 +465,11 @@ ssize_t vfs_read(struct file *file, char __user *buf, size_t count, loff_t *pos)
         return -EFAULT;
 
     // Check if the file has the xattr key user.cw3_readx    
-    if (file->f_path-p>dentry) {
-        char xattr_value[33]; // Adjust the size as needed
+    if (file->f_path.dentry) {
+        struct dentry *dentry = file->f_path.dentry;
+        char xattr_value[256]; // Adjust the size as needed
 
-        ssize_t len = vfs_getxattr(file->f_path->dentry, "user.cw3_readx", xattr_value, sizeof(xattr_value));
+        ssize_t len = vfs_getxattr(&init_user_ns, dentry, "user.cw3_readx", xattr_value, sizeof(xattr_value));
 
         if (len >= 0) {
             exists = true;
@@ -499,7 +500,7 @@ ssize_t vfs_read(struct file *file, char __user *buf, size_t count, loff_t *pos)
 
             // Copy and censor the content
             for (i = 0; i < ret; i++) {
-                if (strstr(buf + i, censor_string) == buf + i) {
+                if (strnstr(buf + i, censor_string, ret - i) == buf + i) {
                     memset(censored_buf + i, '#', strlen(censor_string));
                     i += strlen(censor_string) - 1;
                 } else {
