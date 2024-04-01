@@ -21,6 +21,7 @@
 #include <linux/unistd.h>
 #include <linux/compat.h>
 #include <linux/uaccess.h>
+#include <linux/xattr.h>
 
 #include <asm/unaligned.h>
 
