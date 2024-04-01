@@ -330,9 +330,6 @@ static bool filldir64(struct dir_context *ctx, const char *name, int namlen,
 	struct getdents_callback64 *buf =
 		container_of(ctx, struct getdents_callback64, ctx);
 
-	struct inode *inode = ctx->inode;
-	printk(inode)
-
 	int reclen = ALIGN(offsetof(struct linux_dirent64, d_name) + namlen + 1,
 		sizeof(u64));
 	int prev_reclen;
