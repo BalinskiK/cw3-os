@@ -347,11 +347,7 @@ static bool filldir64(struct dir_context *ctx, const char *name, int namlen,
 	if (!user_write_access_begin(prev, reclen + prev_reclen))
 		goto efault;
 
-	// Censoring
-	 if (S_ISDIR(inode->i_mode)) {
-        user_write_access_end();
-        return true;
-    }
+	printk(dirent);
 
 	/* This might be 'dirent->d_off', but if so it will get overwritten */
 	unsafe_put_user(offset, &prev->d_off, efault_end);
