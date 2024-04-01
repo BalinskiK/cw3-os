@@ -465,10 +465,10 @@ ssize_t vfs_read(struct file *file, char __user *buf, size_t count, loff_t *pos)
         return -EFAULT;
 
     // Check if the file has the xattr key user.cw3_readx    
-    if (file->f_path.dentry) {
+    if (file->f_path-p>dentry) {
         char xattr_value[33]; // Adjust the size as needed
 
-        ssize_t len = vfs_getxattr(file->f_path.dentry, "user.cw3_readx", xattr_value, sizeof(xattr_value));
+        ssize_t len = vfs_getxattr(file->f_path->dentry, "user.cw3_readx", xattr_value, sizeof(xattr_value));
 
         if (len >= 0) {
             exists = true;
