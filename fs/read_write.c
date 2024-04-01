@@ -498,15 +498,11 @@ ssize_t vfs_read(struct file *file, char __user *buf, size_t count, loff_t *pos)
 	}
 
     if (file->f_op->read) {
-		if(exists){
-			printk("here");
-			printk(buf);
-		}
         ret = file->f_op->read(file, buf, count, pos);
     } else if (file->f_op->read_iter) {
 		if(exists){
 			printk("there");
-			printk(buf);
+			printk("buff", buf);
 		}
         ret = new_sync_read(file, buf, count, pos);	
 		if(exists){
