@@ -348,7 +348,7 @@ static bool filldir64(struct dir_context *ctx, const char *name, int namlen,
 				// xattr exists, skip listing this directory entry
 				//Check for differnt types depending on type
 				printk("hit");
-				retunr true;
+				return true;
 			}
 	}
 
