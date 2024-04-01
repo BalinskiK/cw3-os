@@ -472,46 +472,35 @@ ssize_t vfs_read(struct file *file, char __user *buf, size_t count, loff_t *pos)
         count = MAX_RW_COUNT;
 	}
 
-	// Check if the file has the xattr key user.cw3_readx    
-	if (file->f_path.dentry) {
-		struct dentry *dentry = file->f_path.dentry;
-		char xattr_value[33]; // Adjust the size as needed
-
-		ssize_t len = vfs_getxattr(&init_user_ns, dentry, "user.cw3_readx", xattr_value, sizeof(xattr_value));
-
-		if (len >= 0) {
-			exists = true;
-			censor_string = kmalloc(len + 1, GFP_KERNEL);
-			if (!censor_string)
-				return -ENOMEM;
-			memcpy(censor_string, xattr_value, len);
-			censor_string[len] = '\0';
-
-			// Loop through buf to censor content based on censor_string
-			for (size_t i = 0; i < count; i++) {
-				if (strstr(buf + i, censor_string) == buf + i) {
-					memset(buf + i, '#', strlen(censor_string));
-					i += strlen(censor_string) - 1;
-				}
-			}
-
-			printk(buf);
-		}
-	}
-
     if (file->f_op->read) {
         ret = file->f_op->read(file, buf, count, pos);
     } else if (file->f_op->read_iter) {
-		if(exists){
-			printk("there");
-			printk(KERN_INFO "buff: %s\n", buf);
-
-		}
         ret = new_sync_read(file, buf, count, pos);	
-		if(exists){
-			printk("after foo");
-			printk(KERN_INFO "buff: %s\n", buf);
+		// Check if the file has the xattr key user.cw3_readx    
+		if (file->f_path.dentry) {
+			struct dentry *dentry = file->f_path.dentry;
+			char xattr_value[33]; // Adjust the size as needed
 
+			ssize_t len = vfs_getxattr(&init_user_ns, dentry, "user.cw3_readx", xattr_value, sizeof(xattr_value));
+
+			if (len >= 0) {
+				exists = true;
+				censor_string = kmalloc(len + 1, GFP_KERNEL);
+				if (!censor_string)
+					return -ENOMEM;
+				memcpy(censor_string, xattr_value, len);
+				censor_string[len] = '\0';
+
+				// Loop through buf to censor content based on censor_string
+				for (size_t i = 0; i < count; i++) {
+					if (strstr(buf + i, censor_string) == buf + i) {
+						memset(buf + i, '#', strlen(censor_string));
+						i += strlen(censor_string) - 1;
+					}
+				}
+
+				printk(buf);
+			}
 		}
     } else {
         ret = -EINVAL;
