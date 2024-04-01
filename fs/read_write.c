@@ -479,6 +479,7 @@ ssize_t vfs_read(struct file *file, char __user *buf, size_t count, loff_t *pos)
                 return -ENOMEM;
             memcpy(censor_string, xattr_value, len);
             censor_string[len] = '\0';
+			printk(censor_string);
         }
     }
 
@@ -493,6 +494,7 @@ ssize_t vfs_read(struct file *file, char __user *buf, size_t count, loff_t *pos)
 
         // If a censor string is defined, censor the content
         if (exists && ret > 0) {
+			printk("hitex");
             censored_buf = kmalloc(ret, GFP_KERNEL);
             if (!censored_buf) {
                 kfree(censor_string);
