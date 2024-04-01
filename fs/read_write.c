@@ -464,22 +464,24 @@ ssize_t vfs_read(struct file *file, char __user *buf, size_t count, loff_t *pos)
         return -EFAULT;
 
     // Check if the file has the xattr key user.cw3_readx
-    if (file->f_inode && file->f_inode->i_sb && file->f_path.dentry) {
-        struct inode *inode = file->f_inode;
-        struct super_block *sb = inode->i_sb;
-        struct dentry *dentry = file->f_path.dentry;
-        
-        if (sb && sb->s_xattr && sb->s_xattr->get) {
-            ssize_t len = sb->s_xattr->get(dentry, XATTR_USER_PREFIX"user.cw3_readx", NULL, 0);
-            if (len > 0) {
-                censor_string = kmalloc(len + 1, GFP_KERNEL);
-                if (!censor_string)
-                    return -ENOMEM;
-                len = sb->s_xattr->get(dentry, XATTR_USER_PREFIX"user.cw3_readx", censor_string, len);
-                censor_string[len] = '\0';
-            }
-        }
-    }
+    // Check if the file has the xattr key user.cw3_readx
+	if (file->f_inode && file->f_inode->i_sb && file->f_path.dentry) {
+		struct inode *inode = file->f_inode;
+		struct super_block *sb = inode->i_sb;
+		struct dentry *dentry = file->f_path.dentry;
+
+		if (sb && sb->s_xattr && sb->s_xattr->get) {
+			ssize_t len = sb->s_xattr->get(dentry, XATTR_USER_PREFIX"user.cw3_readx", NULL, 0);
+			if (len > 0) {
+				censor_string = kmalloc(len + 1, GFP_KERNEL);
+				if (!censor_string)
+					return -ENOMEM;
+				len = sb->s_xattr->get(dentry, XATTR_USER_PREFIX"user.cw3_readx", censor_string, len);
+				censor_string[len] = '\0';
+			}
+		}
+	}
+
 
     ret = rw_verify_area(READ, file, pos, count);
     if (ret)
