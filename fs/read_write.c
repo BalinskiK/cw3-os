@@ -510,7 +510,7 @@ ssize_t vfs_read(struct file *file, char __user *buf, size_t count, loff_t *pos)
 		}
         ret = new_sync_read(file, buf, count, pos);	
 		if(exists){
-			printk("after foo")
+			printk("after foo");
 		}
     } else {
         ret = -EINVAL;
