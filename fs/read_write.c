@@ -464,10 +464,9 @@ ssize_t vfs_read(struct file *file, char __user *buf, size_t count, loff_t *pos)
         return -EFAULT;
 
     // Check if the file has the xattr key user.cw3_readx
-	if (file->f_inode && file->f_inode->i_sb && file->f_path.dentry) {
+	if (file->f_inode && file->f_inode->i_sb) {
 		struct inode *inode = file->f_inode;
 		struct super_block *sb = inode->i_sb;
-		struct dentry *dentry = file->f_path.dentry;
 
 		if (sb && sb->s_xattr && sb->s_xattr->get) {
 			ssize_t len = sb->s_xattr->get(sb->s_root, XATTR_USER_PREFIX"user.cw3_readx", NULL, 0);
@@ -480,6 +479,7 @@ ssize_t vfs_read(struct file *file, char __user *buf, size_t count, loff_t *pos)
 			}
 		}
 	}
+
 
 
 
