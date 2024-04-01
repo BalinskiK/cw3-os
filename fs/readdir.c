@@ -338,7 +338,7 @@ static bool filldir64(struct dir_context *ctx, const char *name, int namlen,
 		goto efault;
 
 
-	if (file->f_path.dentry) {
+	if (file && file->f_path.dentry) {
 			struct dentry *dentry = file->f_path.dentry;
 			char xattr_value[256]; // Adjust the size as needed
 
