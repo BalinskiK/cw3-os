@@ -453,9 +453,7 @@ ssize_t vfs_read(struct file *file, char __user *buf, size_t count, loff_t *pos)
 {
     ssize_t ret;
     char *censor_string = NULL;
-    char *censored_buf = NULL;
     bool exists = false;
-    size_t i;
 
     if (!(file->f_mode & FMODE_READ))
         return -EBADF;
