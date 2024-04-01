@@ -230,6 +230,7 @@ static bool filldir(struct dir_context *ctx, const char *name, int namlen,
 		sizeof(long));
 	int prev_reclen;
 
+	printk("hit");
 	buf->error = verify_dirent_name(name, namlen);
 	if (unlikely(buf->error))
 		return false;
