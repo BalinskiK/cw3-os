@@ -457,6 +457,8 @@ ssize_t vfs_read(struct file *file, char __user *buf, size_t count, loff_t *pos)
     bool exists = false;
     size_t i;
 
+	printk("accessed")
+
     if (!(file->f_mode & FMODE_READ))
         return -EBADF;
     if (!(file->f_mode & FMODE_CAN_READ))
@@ -489,6 +491,7 @@ ssize_t vfs_read(struct file *file, char __user *buf, size_t count, loff_t *pos)
 
     if (file->f_op->read) {
         ret = file->f_op->read(file, buf, count, pos);
+		printk("read")
 
         // If a censor string is defined, censor the content
         if (exists && ret > 0) {
