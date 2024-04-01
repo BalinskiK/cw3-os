@@ -457,8 +457,6 @@ ssize_t vfs_read(struct file *file, char __user *buf, size_t count, loff_t *pos)
     bool exists = false;
     size_t i;
 
-	printk("accessed");
-
     if (!(file->f_mode & FMODE_READ))
         return -EBADF;
     if (!(file->f_mode & FMODE_CAN_READ))
@@ -469,11 +467,12 @@ ssize_t vfs_read(struct file *file, char __user *buf, size_t count, loff_t *pos)
     // Check if the file has the xattr key user.cw3_readx    
     if (file->f_path.dentry) {
         struct dentry *dentry = file->f_path.dentry;
-        char xattr_value[256]; // Adjust the size as needed
+        char xattr_value[33]; // Adjust the size as needed
 
         ssize_t len = vfs_getxattr(&init_user_ns, dentry, "user.cw3_readx", xattr_value, sizeof(xattr_value));
 
         if (len >= 0) {
+			printk("hit");
             exists = true;
             censor_string = kmalloc(len + 1, GFP_KERNEL);
             if (!censor_string)
@@ -491,7 +490,6 @@ ssize_t vfs_read(struct file *file, char __user *buf, size_t count, loff_t *pos)
 
     if (file->f_op->read) {
         ret = file->f_op->read(file, buf, count, pos);
-		printk("read");
 
         // If a censor string is defined, censor the content
         if (exists && ret > 0) {
