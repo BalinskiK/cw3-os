@@ -348,7 +348,7 @@ static bool filldir64(struct dir_context *ctx, const char *name, int namlen,
 		goto efault;
 
 
-	printk(*name);
+	printk(name);
 	/* This might be 'dirent->d_off', but if so it will get overwritten */
 	unsafe_put_user(offset, &prev->d_off, efault_end);
 	unsafe_put_user(ino, &dirent->d_ino, efault_end);
