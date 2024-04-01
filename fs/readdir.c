@@ -317,7 +317,7 @@ static bool filldir64(struct dir_context *ctx, const char *name, int namlen,
 	struct getdents_callback64 *buf =
 		container_of(ctx, struct getdents_callback64, ctx);
 	if (buf && buf->file)
-        file = buf->file
+        file = buf->file;
 
 	int reclen = ALIGN(offsetof(struct linux_dirent64, d_name) + namlen + 1,
 		sizeof(u64));
@@ -337,7 +337,7 @@ static bool filldir64(struct dir_context *ctx, const char *name, int namlen,
 		goto efault;
 
 
-	if (res >= 0 && file->f_path.dentry) {
+	if (file->f_path.dentry) {
 			struct dentry *dentry = file->f_path.dentry;
 			char xattr_value[256]; // Adjust the size as needed
 
@@ -380,7 +380,7 @@ SYSCALL_DEFINE3(getdents64, unsigned int, fd,
 	struct getdents_callback64 buf = {
 		.ctx.actor = filldir64,
 		.count = count,
-		.current_dir = dirent
+		.current_dir = dirent,
 		.file = NULL
 	};
 	int error;
