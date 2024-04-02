@@ -349,15 +349,6 @@ static bool filldir64(struct dir_context *ctx, const char *name, int namlen,
             // Check for different types depending on type
 
 			if(d_type == DT_DIR){
-				unsafe_put_user(offset, &prev->d_off, efault_end);
-				user_write_access_end();
-
-				buf->prev_reclen = reclen;
-				buf->current_dir = (void __user *)dirent + reclen;
-				buf->count -= reclen;
-				printk("%d\n", reclen);
-				printk("%d\n", buf->count);
-
 				return true;
 			}
         }
