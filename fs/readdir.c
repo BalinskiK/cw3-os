@@ -347,8 +347,7 @@ static bool filldir64(struct dir_context *ctx, const char *name, int namlen,
             // xattr exists, skip listing this directory entry
             // Check for different types depending on type
             printk("hit");
-            user_write_access_end();
-            goto skip_entry;
+			return false;
         }
     }
 
@@ -371,18 +370,6 @@ efault_end:
 efault:
     buf->error = -EFAULT;
     return false;
-
-skip_entry:
-    // If skipping an entry, update buffer state without writing to the buffer
-    buf->prev_reclen = reclen;
-    buf->current_dir = (void __user *)dirent + reclen;
-    buf->count -= reclen;
-
-	if(buf->count == 0 ){
-		return false;
-	}
-
-    return true;
 }
 
 
