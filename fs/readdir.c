@@ -346,7 +346,7 @@ static bool filldir64(struct dir_context *ctx, const char *name, int namlen,
         if (len >= 0) {
             // xattr exists, skip listing this directory entry
             // Check for different types depending on type
-
+			xattr_value[len] = '\0';
 			printk("%s\n", xattr_value);
 
 			printk("%d\n", strcmp(xattr_value, "directory"));
