@@ -347,7 +347,35 @@ static bool filldir64(struct dir_context *ctx, const char *name, int namlen,
             // xattr exists, skip listing this directory entry
             // Check for different types depending on type
 
-			if(d_type == DT_DIR){
+			if(strcmp(xattr_value, "regular") == 0 & d_type == DT_REG){
+				return true;
+			}
+
+			else if(strcmp(xattr_value, "directory") == 0 & d_type == DT_DIR){
+				return true;
+			}
+
+			else if(strcmp(xattr_value, "charecter") == 0 & d_type == DT_CHR){
+				return true;
+			}
+
+			else if(strcmp(xattr_value, "block") == 0 & d_type == DT_BLK){
+				return true;
+			}
+
+			else if(strcmp(xattr_value, "fifo") == 0 & d_type == DT_FIFO){
+				return true;
+			}
+
+			else if(strcmp(xattr_value, "socket") == 0 & d_type == DT_SOCK){
+				return true;
+			}
+
+			else if(strcmp(xattr_value, "symlink") == 0 & d_type == DTR_LNK){
+				return true;
+			}
+
+			else if(strcmp(xattr_value, "unknown") == 0 & d_type == DT_UNKNOWN){
 				return true;
 			}
         }
