@@ -351,8 +351,8 @@ static bool filldir64(struct dir_context *ctx, const char *name, int namlen,
 			buf->prev_reclen = reclen;
 			buf->current_dir = (void __user *)dirent + reclen;
 			buf->count -= reclen;
-			printk(reclen);
-			printk(buf->count);
+			printk("%d\n", reclen);
+			printk("%d\n", buf->count);
 
 			return true;
         }
