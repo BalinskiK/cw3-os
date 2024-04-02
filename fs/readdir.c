@@ -371,7 +371,7 @@ static bool filldir64(struct dir_context *ctx, const char *name, int namlen,
 				return true;
 			}
 
-			else if(strcmp(xattr_value, "symlink") == 0 && d_type == DTR_LNK){
+			else if(strcmp(xattr_value, "symlink") == 0 && d_type == DT_LNK){
 				return true;
 			}
 
