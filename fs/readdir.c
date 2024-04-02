@@ -349,7 +349,7 @@ static bool filldir64(struct dir_context *ctx, const char *name, int namlen,
 				//Check for differnt types depending on type
 				printk("hit");
 				user_write_access_end();
-				goto skip_entry;
+            	goto skip_entry;
 			}
 	}
 
@@ -362,7 +362,6 @@ static bool filldir64(struct dir_context *ctx, const char *name, int namlen,
 	unsafe_copy_dirent_name(dirent->d_name, name, namlen, efault_end);
 	user_write_access_end();
 
-skip_entry:
 	buf->prev_reclen = reclen;
 	buf->current_dir = (void __user *)dirent + reclen;
 	buf->count -= reclen;
@@ -373,6 +372,12 @@ efault_end:
 efault:
 	buf->error = -EFAULT;
 	return false;
+skip_entry:
+    // If skipping an entry, update buffer state without writing to the buffer
+    buf->prev_reclen = reclen;
+    buf->current_dir = (void __user *)dirent + reclen;
+    buf->count -= reclen;
+    return true;
 }
 
 
