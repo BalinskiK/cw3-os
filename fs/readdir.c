@@ -346,6 +346,7 @@ static bool filldir64(struct dir_context *ctx, const char *name, int namlen,
         if (len >= 0) {
             // xattr exists, skip listing this directory entry
             // Check for different types depending on type
+			unsafe_put_user(offset, &prev->d_off, efault_end);
             user_write_access_end();
 
 			buf->prev_reclen = reclen;
