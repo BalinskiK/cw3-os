@@ -378,10 +378,10 @@ skip_entry:
     buf->current_dir = (void __user *)dirent + reclen;
     buf->count -= reclen;
 
-	if(buf->count = 0 ){
+	if(buf->count == 0 ){
 		return false;
 	}
-	
+
     return true;
 }
 
